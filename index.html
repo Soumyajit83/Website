@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        .container {
+            max-width: 600px;
+            margin: 20px auto;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+        }
+        #preview {
+            max-width: 300px;
+            margin: 10px 0;
+        }
+        #response {
+            white-space: pre-wrap;
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid #ddd;
+        }
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            display: none;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Medical Image Analysis</h2>
+        
+        <!-- Image Upload -->
+        <input type="file" id="imageInput" accept="image/*">
+        <img id="preview">
+        
+        <!-- Question Input -->
+        <textarea id="questionInput" 
+                  placeholder="Ask about the image..."
+                  rows="3"
+                  style="width: 100%; margin: 10px 0;"></textarea>
+        
+        <!-- Submit Button -->
+        <button onclick="analyze()">Analyze</button>
+        
+        <!-- Loading & Results -->
+        <div class="loader" id="loader"></div>
+        <div id="response"></div>
+    </div>
+
+    <script>
+        const API_ENDPOINT = "http://YOUR_LAPTOP_IP:5000/infer";
+        
+        function analyze() {
+            const file = document.getElementById('imageInput').files[0];
+            const question = document.getElementById('questionInput').value || "Analyze this image";
+            
+            if (!file) {
+                alert("Please select an image");
+                return;
+            }
+
+            // Show loader
+            document.getElementById('loader').style.display = 'block';
+            document.getElementById('response').textContent = '';
+
+            // Read image
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                try {
+                    const response = await fetch(API_ENDPOINT, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            image: e.target.result,
+                            question: question
+                        })
+                    });
+
+                    const data = await response.json();
+                    
+                    if (data.status === 'success') {
+                        document.getElementById('response').innerHTML = 
+                            data.response.replace(/\n/g, '<br>');
+                    } else {
+                        throw new Error(data.message || "Analysis failed");
+                    }
+                } catch (error) {
+                    document.getElementById('response').textContent = 
+                        `Error: ${error.message}`;
+                } finally {
+                    document.getElementById('loader').style.display = 'none';
+                }
+            };
+            
+            reader.readAsDataURL(file);
+        }
+
+        // Preview uploaded image
+        document.getElementById('imageInput').onchange = function(e) {
+            const reader = new FileReader();
+            reader.onload = function() {
+                document.getElementById('preview').src = reader.result;
+            }
+            reader.readAsDataURL(e.target.files[0]);
+        };
+    </script>
+</body>
+</html>
